@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Simple Graph Grid</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: #f5f5f5;
+    }
+    canvas {
+      border: 1px solid #ccc;
+      background: #fff;
+    }
+  </style>
+</head>
+<body>
+<canvas id="canvas" width="240" height="240"></canvas>
+
+<script>
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
+
+  const width = canvas.width;
+  const height = canvas.height;
+  const offStates = new Set();
+  const onStates = new Set();
+  const fireStates = new Set();
+  const fireStatesToFinish = new Set();
+
+  const fireSpreadProbability = 0.3;
+  const newFireStartProbability = 0.02;
+  const growthRate = 10;
+
+  function init(){
+    for(let x = 0; x < width; x++) {
+      for(let y = 0; y < height; y++) {
+        offStates.add(`${x},${y}`);
+      }
+    }
+  }
+
+  function fillOnStatesRandomPercent(percent) {
+    while(onStates.size < percent * width * height) {
+      const x = randomBetween(0, width - 1);
+      const y = randomBetween(0, height - 1);
+      const key = `${x},${y}`;
+      if(offStates.has(key)) {
+        offStates.delete(key);
+        onStates.add(key);
+        drawPixel(x, y, 'black');
+      }
+
+    }
+  }
+
+  function drawGrid() {
+    ctx.clearRect(0, 0, width, height);
+  }
+
+  function drawPixel(x, y, color) {
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, 1, 1);
+  }
+
+  function randomBetween(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  function getActiveNeighbours(x, y){
+    const result = new Set();
+    for (let i = 0; i < 8; i++) {
+      let nx = x;
+      let ny = y;
+      if(i === 0) nx = x - 1;          // left
+      else if(i === 1) nx = x + 1;     // right
+      else if(i === 2) ny = y - 1;     // up
+      else if(i === 3) ny = y + 1;     // down
+      else if(i === 4) { nx = x - 1; ny = y - 1; } // up-left
+      else if(i === 5) { nx = x + 1; ny = y - 1; } // up-right
+      else if(i === 6) { nx = x - 1; ny = y + 1; } // down-left
+      else if(i === 7) { nx = x + 1; ny = y + 1; } // down-right
+
+      if(onStates.has(`${nx},${ny}`)) {
+        result.add([nx, ny]);
+      }
+    }
+    return result;
+  }
+
+  let noRender = true
+
+  function draw(redraw=false) {
+
+    // only draw a new black pixel if there are off states left
+    if (offStates.size > 0) {
+      for (let i = 0; i < growthRate; i++) {
+        const index = randomBetween(0, offStates.size - 1);
+        const [x, y] = Array.from(offStates)[index].split(',').map(Number);
+        drawPixel(x, y, 'black');
+        offStates.delete(`${x},${y}`);
+        onStates.add(`${x},${y}`);
+      }
+
+    }
+
+    // clear fires that have finished (turn back to white + off)
+    for (const firePos of Array.from(fireStatesToFinish)) {
+      const [fx, fy] = firePos.split(',').map(Number);
+      drawPixel(fx, fy, 'white');
+      fireStatesToFinish.delete(firePos);
+      offStates.add(firePos);
+    }
+
+    //spread existing fires
+    const newFireStates = new Set();
+    for (const firePos of Array.from(fireStates)) {
+      const [fx, fy] = firePos.split(',').map(Number);
+      const neighbours = getActiveNeighbours(fx, fy);
+      neighbours.forEach(([nx, ny]) => {
+        if(Math.random() < fireSpreadProbability) {
+          const key = `${nx},${ny}`;
+          newFireStates.add(key);
+          onStates.delete(key);
+          drawPixel(nx, ny, 'red');
+        }
+      });
+
+      // mark this fire to finish next step
+      fireStatesToFinish.add(firePos);
+      fireStates.delete(firePos);
+    }
+    newFireStates.forEach(pos => fireStates.add(pos));
+
+    // randomly start a new fire
+    if(Math.random() < newFireStartProbability && onStates.size > 0) {
+      const fireIndex = randomBetween(0, onStates.size - 1);
+      const [fx, fy] = Array.from(onStates)[fireIndex].split(',').map(Number);
+      const startKey = `${fx},${fy}`;
+
+      fireStatesToFinish.add(startKey);
+      onStates.delete(startKey);
+      drawPixel(fx, fy, 'red');
+
+      // initial spread from the new fire
+      const neighbours = getActiveNeighbours(fx, fy);
+      neighbours.forEach(([nx, ny]) => {
+        if(Math.random() < fireSpreadProbability) {
+          const key = `${nx},${ny}`;
+          fireStates.add(key);
+          onStates.delete(key);
+          drawPixel(nx, ny, 'red');
+        }
+      });
+    }
+    if(redraw){
+      requestAnimationFrame(() => draw(true));
+    }
+  }
+
+  function renderSteps(){
+    requestAnimationFrame(() => draw(true));
+  }
+
+  drawGrid();
+  init();
+  fillOnStatesRandomPercent(.8);
+  requestAnimationFrame(renderSteps);
+
+</script>
+</body>
+</html>
