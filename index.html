@@ -236,10 +236,10 @@
   const ctx = canvas.getContext("2d");
 
   // Grid dimensions (logical size)
-  let gridWidth = 240;
-  let gridHeight = 240;
+  let gridWidth = 400;
+  let gridHeight = 400;
 
-  let pixelSize = 2;
+  let pixelSize = 1;
   let offStates = new Set();
   let onStates = new Set();
   let fireStates = new Set();
@@ -248,7 +248,7 @@
   let fireSpreadProbability = 0.3;
   let newFireStartProbability = 0.04;
   let growthRate = 30;
-  let startingOnPercent = 0.6;
+  let startingOnPercent = 0.75;
 
   // Slider controls
   const spreadSlider = document.getElementById("spreadSlider");
@@ -268,6 +268,28 @@
   function updateCanvasSize() {
     canvas.width = gridWidth * pixelSize;
     canvas.height = gridHeight * pixelSize;
+  }
+
+  function syncUIWithVariables() {
+    // Sync sliders and their displays
+    spreadSlider.value = fireSpreadProbability;
+    spreadValue.textContent = fireSpreadProbability.toFixed(2);
+
+    newFireSlider.value = newFireStartProbability;
+    newFireValue.textContent = newFireStartProbability.toFixed(3);
+
+    growthSlider.value = growthRate;
+    growthValue.textContent = growthRate;
+
+    startingSlider.value = startingOnPercent;
+    startingValue.textContent = Math.round(startingOnPercent * 100) + "%";
+
+    pixelSizeSlider.value = pixelSize;
+    pixelSizeValue.textContent = pixelSize;
+
+    // Sync dimension inputs
+    gridWidthInput.value = gridWidth;
+    gridHeightInput.value = gridHeight;
   }
 
   spreadSlider.addEventListener("input", (e) => {
@@ -315,6 +337,7 @@
     onStates = new Set();
     fireStates = new Set();
     fireStatesToFinish = new Set();
+
     updateCanvasSize();
     drawGrid();
     init();
@@ -474,6 +497,7 @@
     requestAnimationFrame(() => draw(true));
   }
 
+  syncUIWithVariables();
   updateCanvasSize();
   drawGrid();
   init();
