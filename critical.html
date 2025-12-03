@@ -32,13 +32,15 @@
   const fireStatesToFinish = new Set();
 
   const fireSpreadProbability = 0.3;
-  const newFireStartProbability = 0.02;
-  const growthRate = 10;
+  const newFireStartProbability = 0.04;
+  const growthRate = 30;
+  const startingOnPercent = 0.6;
 
   function init(){
     for(let x = 0; x < width; x++) {
       for(let y = 0; y < height; y++) {
         offStates.add(`${x},${y}`);
+        drawPixel(x, y, 'black');
       }
     }
   }
@@ -51,7 +53,7 @@
       if(offStates.has(key)) {
         offStates.delete(key);
         onStates.add(key);
-        drawPixel(x, y, 'black');
+        drawPixel(x, y, 'green');
       }
 
     }
@@ -93,24 +95,24 @@
 
   let noRender = true
 
-  function draw(redraw=false) {
+  function draw(yellowraw=false) {
 
-    // only draw a new black pixel if there are off states left
+    // only draw a new green pixel if there are off states left
     if (offStates.size > 0) {
       for (let i = 0; i < growthRate; i++) {
         const index = randomBetween(0, offStates.size - 1);
         const [x, y] = Array.from(offStates)[index].split(',').map(Number);
-        drawPixel(x, y, 'black');
+        drawPixel(x, y, 'green');
         offStates.delete(`${x},${y}`);
         onStates.add(`${x},${y}`);
       }
 
     }
 
-    // clear fires that have finished (turn back to white + off)
+    // clear fires that have finished (turn back to black + off)
     for (const firePos of Array.from(fireStatesToFinish)) {
       const [fx, fy] = firePos.split(',').map(Number);
-      drawPixel(fx, fy, 'white');
+      drawPixel(fx, fy, 'black');
       fireStatesToFinish.delete(firePos);
       offStates.add(firePos);
     }
@@ -125,7 +127,7 @@
           const key = `${nx},${ny}`;
           newFireStates.add(key);
           onStates.delete(key);
-          drawPixel(nx, ny, 'red');
+          drawPixel(nx, ny, 'yellow');
         }
       });
 
@@ -143,7 +145,7 @@
 
       fireStatesToFinish.add(startKey);
       onStates.delete(startKey);
-      drawPixel(fx, fy, 'red');
+      drawPixel(fx, fy, 'yellow');
 
       // initial spread from the new fire
       const neighbours = getActiveNeighbours(fx, fy);
@@ -152,11 +154,11 @@
           const key = `${nx},${ny}`;
           fireStates.add(key);
           onStates.delete(key);
-          drawPixel(nx, ny, 'red');
+          drawPixel(nx, ny, 'yellow');
         }
       });
     }
-    if(redraw){
+    if(yellowraw){
       requestAnimationFrame(() => draw(true));
     }
   }
@@ -167,7 +169,7 @@
 
   drawGrid();
   init();
-  fillOnStatesRandomPercent(.8);
+  fillOnStatesRandomPercent(startingOnPercent);
   requestAnimationFrame(renderSteps);
 
 </script>
