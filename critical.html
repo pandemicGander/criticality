@@ -2,70 +2,380 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Simple Graph Grid</title>
+  <title>Fire Spread Simulation</title>
   <style>
+    * {
+      box-sizing: border-box;
+    }
     body {
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
-      background: #f5f5f5;
+      min-height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      color: #e0e0e0;
+    }
+    .container {
+      display: flex;
+      gap: 32px;
+      padding: 32px;
+      align-items: flex-start;
     }
     canvas {
-      border: 1px solid #ccc;
-      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      background: #0a0a0a;
+    }
+    .controls {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 24px;
+      min-width: 280px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    h1 {
+      margin: 0 0 24px 0;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #fff;
+    }
+    .control-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 0.875rem;
+      color: #a0a0a0;
+    }
+    .value-display {
+      float: right;
+      font-weight: 500;
+      color: #64ffda;
+    }
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.1);
+      appearance: none;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #64ffda;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(100, 255, 218, 0.3);
+      transition: transform 0.15s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.1);
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #64ffda;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 2px 8px rgba(100, 255, 218, 0.3);
+    }
+    .btn {
+      width: 100%;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-top: 8px;
+    }
+    .btn-primary {
+      background: #64ffda;
+      color: #1a1a2e;
+    }
+    .btn-primary:hover {
+      background: #4fd1b0;
+      transform: translateY(-1px);
+    }
+    .stats {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 0.875rem;
+    }
+    .stat-label {
+      color: #a0a0a0;
+    }
+    .stat-value {
+      font-weight: 500;
+    }
+    .stat-value.forest { color: #4ade80; }
+    .stat-value.fire { color: #fbbf24; }
+    .stat-value.empty { color: #94a3b8; }
+    .dimension-inputs {
+      display: flex;
+      gap: 12px;
+    }
+    .dimension-inputs .control-group {
+      flex: 1;
+      margin-bottom: 0;
+    }
+    input[type="number"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      color: #e0e0e0;
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+    input[type="number"]:focus {
+      border-color: #64ffda;
+    }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      opacity: 1;
     }
   </style>
 </head>
 <body>
-<canvas id="canvas" width="240" height="240"></canvas>
+<div class="container">
+  <canvas id="canvas"></canvas>
+  <div class="controls">
+    <h1>Fire Simulation</h1>
+
+    <div class="control-group">
+      <label>
+        Fire Spread Probability
+        <span class="value-display" id="spreadValue">0.30</span>
+      </label>
+      <input type="range" id="spreadSlider" min="0" max="1" step="0.01" value="0.3">
+    </div>
+
+    <div class="control-group">
+      <label>
+        New Fire Probability
+        <span class="value-display" id="newFireValue">0.040</span>
+      </label>
+      <input type="range" id="newFireSlider" min="0" max="0.2" step="0.005" value="0.04">
+    </div>
+
+    <div class="control-group">
+      <label>
+        Growth Rate
+        <span class="value-display" id="growthValue">30</span>
+      </label>
+      <input type="range" id="growthSlider" min="1" max="100" step="1" value="30">
+    </div>
+
+    <div class="control-group">
+      <label>
+        Starting Forest %
+        <span class="value-display" id="startingValue">60%</span>
+      </label>
+      <input type="range" id="startingSlider" min="0" max="1" step="0.05" value="0.6">
+    </div>
+
+    <div class="control-group">
+      <label>
+        Pixel Size
+        <span class="value-display" id="pixelSizeValue">2</span>
+      </label>
+      <input type="range" id="pixelSizeSlider" min="1" max="3" step="1" value="2">
+    </div>
+
+    <div class="control-group">
+      <label>Grid Dimensions</label>
+      <div class="dimension-inputs">
+        <div class="control-group">
+          <input type="number" id="gridWidthInput" min="50" max="1000" value="240" placeholder="Width">
+        </div>
+        <div class="control-group">
+          <input type="number" id="gridHeightInput" min="50" max="1000" value="240" placeholder="Height">
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="resetBtn">Reset Simulation</button>
+
+    <div class="stats">
+      <div class="stat-row">
+        <span class="stat-label">Forest</span>
+        <span class="stat-value forest" id="forestStat">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Burning</span>
+        <span class="stat-value fire" id="fireStat">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Empty</span>
+        <span class="stat-value empty" id="emptyStat">0</span>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
   const canvas = document.getElementById("canvas");
   const ctx = canvas.getContext("2d");
 
-  const width = canvas.width;
-  const height = canvas.height;
-  const offStates = new Set();
-  const onStates = new Set();
-  const fireStates = new Set();
-  const fireStatesToFinish = new Set();
+  // Grid dimensions (logical size)
+  let gridWidth = 240;
+  let gridHeight = 240;
 
-  const fireSpreadProbability = 0.3;
-  const newFireStartProbability = 0.04;
-  const growthRate = 30;
-  const startingOnPercent = 0.6;
+  let pixelSize = 2;
+  let offStates = new Set();
+  let onStates = new Set();
+  let fireStates = new Set();
+  let fireStatesToFinish = new Set();
+
+  let fireSpreadProbability = 0.3;
+  let newFireStartProbability = 0.04;
+  let growthRate = 30;
+  let startingOnPercent = 0.6;
+
+  // Slider controls
+  const spreadSlider = document.getElementById("spreadSlider");
+  const newFireSlider = document.getElementById("newFireSlider");
+  const growthSlider = document.getElementById("growthSlider");
+  const startingSlider = document.getElementById("startingSlider");
+  const pixelSizeSlider = document.getElementById("pixelSizeSlider");
+  const gridWidthInput = document.getElementById("gridWidthInput");
+  const gridHeightInput = document.getElementById("gridHeightInput");
+  const spreadValue = document.getElementById("spreadValue");
+  const newFireValue = document.getElementById("newFireValue");
+  const growthValue = document.getElementById("growthValue");
+  const startingValue = document.getElementById("startingValue");
+  const pixelSizeValue = document.getElementById("pixelSizeValue");
+  const resetBtn = document.getElementById("resetBtn");
+
+  function updateCanvasSize() {
+    canvas.width = gridWidth * pixelSize;
+    canvas.height = gridHeight * pixelSize;
+  }
+
+  spreadSlider.addEventListener("input", (e) => {
+    fireSpreadProbability = parseFloat(e.target.value);
+    spreadValue.textContent = fireSpreadProbability.toFixed(2);
+  });
+
+  newFireSlider.addEventListener("input", (e) => {
+    newFireStartProbability = parseFloat(e.target.value);
+    newFireValue.textContent = newFireStartProbability.toFixed(3);
+  });
+
+  growthSlider.addEventListener("input", (e) => {
+    growthRate = parseInt(e.target.value);
+    growthValue.textContent = growthRate;
+  });
+
+  startingSlider.addEventListener("input", (e) => {
+    startingOnPercent = parseFloat(e.target.value);
+    startingValue.textContent = Math.round(startingOnPercent * 100) + "%";
+  });
+
+  pixelSizeSlider.addEventListener("input", (e) => {
+    pixelSizeValue.textContent = e.target.value;
+  });
+
+  pixelSizeSlider.addEventListener("change", (e) => {
+    pixelSize = parseInt(e.target.value);
+    updateCanvasSize();
+    redrawAll();
+  });
+
+  resetBtn.addEventListener("click", resetSimulation);
+
+  function resetSimulation() {
+    // Update grid dimensions from inputs
+    const newWidth = parseInt(gridWidthInput.value) || 240;
+    const newHeight = parseInt(gridHeightInput.value) || 240;
+    gridWidth = Math.max(50, Math.min(1000, newWidth));
+    gridHeight = Math.max(50, Math.min(1000, newHeight));
+    gridWidthInput.value = gridWidth;
+    gridHeightInput.value = gridHeight;
+
+    offStates = new Set();
+    onStates = new Set();
+    fireStates = new Set();
+    fireStatesToFinish = new Set();
+    updateCanvasSize();
+    drawGrid();
+    init();
+    fillOnStatesRandomPercent(startingOnPercent);
+  }
+
+  function redrawAll() {
+    drawGrid();
+    for (const pos of offStates) {
+      const [x, y] = pos.split(',').map(Number);
+      drawPixel(x, y, '#1a1a1a');
+    }
+    for (const pos of onStates) {
+      const [x, y] = pos.split(',').map(Number);
+      drawPixel(x, y, '#15803d');
+    }
+    for (const pos of fireStates) {
+      const [x, y] = pos.split(',').map(Number);
+      drawPixel(x, y, '#fbbf24');
+    }
+    for (const pos of fireStatesToFinish) {
+      const [x, y] = pos.split(',').map(Number);
+      drawPixel(x, y, '#fbbf24');
+    }
+  }
+
+  function updateStats() {
+    document.getElementById("forestStat").textContent = onStates.size.toLocaleString();
+    document.getElementById("fireStat").textContent = (fireStates.size + fireStatesToFinish.size).toLocaleString();
+    document.getElementById("emptyStat").textContent = offStates.size.toLocaleString();
+  }
 
   function init(){
-    for(let x = 0; x < width; x++) {
-      for(let y = 0; y < height; y++) {
+    for(let x = 0; x < gridWidth; x++) {
+      for(let y = 0; y < gridHeight; y++) {
         offStates.add(`${x},${y}`);
-        drawPixel(x, y, 'black');
+        drawPixel(x, y, '#1a1a1a');
       }
     }
   }
 
   function fillOnStatesRandomPercent(percent) {
-    while(onStates.size < percent * width * height) {
-      const x = randomBetween(0, width - 1);
-      const y = randomBetween(0, height - 1);
+    while(onStates.size < percent * gridWidth * gridHeight) {
+      const x = randomBetween(0, gridWidth - 1);
+      const y = randomBetween(0, gridHeight - 1);
       const key = `${x},${y}`;
       if(offStates.has(key)) {
         offStates.delete(key);
         onStates.add(key);
-        drawPixel(x, y, 'green');
+        drawPixel(x, y, '#15803d');
       }
-
     }
   }
 
   function drawGrid() {
-    ctx.clearRect(0, 0, width, height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
 
   function drawPixel(x, y, color) {
     ctx.fillStyle = color;
-    ctx.fillRect(x, y, 1, 1);
+    ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
   }
 
   function randomBetween(min, max) {
@@ -77,14 +387,14 @@
     for (let i = 0; i < 8; i++) {
       let nx = x;
       let ny = y;
-      if(i === 0) nx = x - 1;          // left
-      else if(i === 1) nx = x + 1;     // right
-      else if(i === 2) ny = y - 1;     // up
-      else if(i === 3) ny = y + 1;     // down
-      else if(i === 4) { nx = x - 1; ny = y - 1; } // up-left
-      else if(i === 5) { nx = x + 1; ny = y - 1; } // up-right
-      else if(i === 6) { nx = x - 1; ny = y + 1; } // down-left
-      else if(i === 7) { nx = x + 1; ny = y + 1; } // down-right
+      if(i === 0) nx = x - 1;
+      else if(i === 1) nx = x + 1;
+      else if(i === 2) ny = y - 1;
+      else if(i === 3) ny = y + 1;
+      else if(i === 4) { nx = x - 1; ny = y - 1; }
+      else if(i === 5) { nx = x + 1; ny = y - 1; }
+      else if(i === 6) { nx = x - 1; ny = y + 1; }
+      else if(i === 7) { nx = x + 1; ny = y + 1; }
 
       if(onStates.has(`${nx},${ny}`)) {
         result.add([nx, ny]);
@@ -93,31 +403,27 @@
     return result;
   }
 
-  let noRender = true
-
-  function draw(yellowraw=false) {
-
-    // only draw a new green pixel if there are off states left
+  function draw(loop = false) {
+    // Grow new trees if there's space
     if (offStates.size > 0) {
-      for (let i = 0; i < growthRate; i++) {
+      for (let i = 0; i < growthRate && offStates.size > 0; i++) {
         const index = randomBetween(0, offStates.size - 1);
         const [x, y] = Array.from(offStates)[index].split(',').map(Number);
-        drawPixel(x, y, 'green');
+        drawPixel(x, y, '#15803d');
         offStates.delete(`${x},${y}`);
         onStates.add(`${x},${y}`);
       }
-
     }
 
-    // clear fires that have finished (turn back to black + off)
+    // Clear finished fires (turn to empty)
     for (const firePos of Array.from(fireStatesToFinish)) {
       const [fx, fy] = firePos.split(',').map(Number);
-      drawPixel(fx, fy, 'black');
+      drawPixel(fx, fy, '#1a1a1a');
       fireStatesToFinish.delete(firePos);
       offStates.add(firePos);
     }
 
-    //spread existing fires
+    // Spread existing fires
     const newFireStates = new Set();
     for (const firePos of Array.from(fireStates)) {
       const [fx, fy] = firePos.split(',').map(Number);
@@ -127,17 +433,16 @@
           const key = `${nx},${ny}`;
           newFireStates.add(key);
           onStates.delete(key);
-          drawPixel(nx, ny, 'yellow');
+          drawPixel(nx, ny, '#fbbf24');
         }
       });
 
-      // mark this fire to finish next step
       fireStatesToFinish.add(firePos);
       fireStates.delete(firePos);
     }
     newFireStates.forEach(pos => fireStates.add(pos));
 
-    // randomly start a new fire
+    // Randomly start new fires
     if(Math.random() < newFireStartProbability && onStates.size > 0) {
       const fireIndex = randomBetween(0, onStates.size - 1);
       const [fx, fy] = Array.from(onStates)[fireIndex].split(',').map(Number);
@@ -145,20 +450,22 @@
 
       fireStatesToFinish.add(startKey);
       onStates.delete(startKey);
-      drawPixel(fx, fy, 'yellow');
+      drawPixel(fx, fy, '#fbbf24');
 
-      // initial spread from the new fire
       const neighbours = getActiveNeighbours(fx, fy);
       neighbours.forEach(([nx, ny]) => {
         if(Math.random() < fireSpreadProbability) {
           const key = `${nx},${ny}`;
           fireStates.add(key);
           onStates.delete(key);
-          drawPixel(nx, ny, 'yellow');
+          drawPixel(nx, ny, '#fbbf24');
         }
       });
     }
-    if(yellowraw){
+
+    updateStats();
+
+    if(loop) {
       requestAnimationFrame(() => draw(true));
     }
   }
@@ -167,6 +474,7 @@
     requestAnimationFrame(() => draw(true));
   }
 
+  updateCanvasSize();
   drawGrid();
   init();
   fillOnStatesRandomPercent(startingOnPercent);
